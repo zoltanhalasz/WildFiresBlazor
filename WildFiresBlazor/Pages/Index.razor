@@ -1,0 +1,59 @@
+﻿@page "/"
+@using Radzen
+@using WildFiresBlazor.Data
+@inject IHttpClientFactory _clientFactory
+@using System.Net.Http.Json;
+
+
+<div class="row">
+    <div class="col-md-12">
+        <RadzenGoogleMap style="height: 700px" Zoom=@zoom Center=@(new GoogleMapPosition() { Lat = 36.778259, Lng = -119.417931 }) MapClick=@OnMapClick MarkerClick=@OnMarkerClick>
+            <Markers>
+
+                @if (firemarkerlist != null)
+                {
+                    foreach (var marker in firemarkerlist)
+                    {
+                        <RadzenGoogleMapMarker Title="@(marker.location+ "/" + marker.date)" Label="" Position="@(new GoogleMapPosition() { Lat = marker.x, Lng = marker.y})" />
+                    }
+                }
+
+            </Markers>
+        </RadzenGoogleMap>
+    </div>
+</div>
+
+@code {
+    int zoom = 6;
+    Container myContainer;
+    List<FireMarker> firemarkerlist;
+
+    void OnMapClick(GoogleMapClickEventArgs args)
+    {
+        Console.WriteLine($"Map clicked at Lat: {args.Position.Lat}, Lng: {args.Position.Lng}");
+    }
+
+    void OnMarkerClick(RadzenGoogleMapMarker marker)
+    {
+        Console.WriteLine($"Map {marker.Title} marker clicked. Marker position -> Lat: {marker.Position.Lat}, Lng: {marker.Position.Lng}");
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var client = _clientFactory.CreateClient("nasa");
+        myContainer = await client.GetFromJsonAsync<Container>("");
+        //Console.WriteLine(myContainer.description);
+        firemarkerlist = new List<FireMarker>();
+        foreach (var myevent in myContainer.events)
+        {
+            var marker = new FireMarker();
+            marker.date = myevent.geometries.First().date.Substring(0,10);
+            marker.location = myevent.title;
+            marker.y = (double)myevent.geometries.First().coordinates[0];
+            marker.x = (double)myevent.geometries.First().coordinates[1];
+            firemarkerlist.Add(marker);
+        }
+        //Console.WriteLine(firemarkerlist.Count());
+
+    }
+}
